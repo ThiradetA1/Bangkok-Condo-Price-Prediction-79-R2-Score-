@@ -59,7 +59,7 @@ feature_imp = pd.Series(model.feature_importances_, index=features).sort_values(
 print("\nปัจจัยที่มีผลต่อราคาคอนโดมากที่สุด:")
 print(feature_imp)
 
-print("\n🔍 Example Prediction:")
+print("\nExample Prediction:")
 example_index = 2
 real_price = y_test.iloc[example_index]
 pred_price = y_pred[example_index]
@@ -80,4 +80,5 @@ plt.xlabel('(Actual Price)')
 plt.ylabel('(Predicted Price)')
 plt.title(f'Actual vs Predicted Price ($R^2$: {r2:.2f})')
 plt.show()
+
 
