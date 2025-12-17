@@ -64,7 +64,7 @@ def scrape_pages_robust(start_page=1, end_page=200):
     for page in range(start_page, end_page + 1):
         
         if page % 50 == 0:
-            print("♻️ Restarting browser to clear memory...")
+            print(" Restarting browser to clear memory...")
             driver.quit()
             time.sleep(2)
             driver = init_driver()
@@ -79,7 +79,7 @@ def scrape_pages_robust(start_page=1, end_page=200):
                 time.sleep(random.uniform(3, 5)) 
                 
                 if "403 Forbidden" in driver.title or "Error" in driver.title:
-                    print("    Blocked or Error page. Waiting longer...")
+                    print("Blocked or Error page. Waiting longer...")
                     time.sleep(10)
                     raise Exception("Page load error")
 
@@ -141,9 +141,9 @@ def scrape_pages_robust(start_page=1, end_page=200):
                     df_page = df_page[cols_order] 
                     
                     df_page.to_csv(filename, mode='a', header=False, index=False, encoding="utf-8-sig")
-                    print(f"    ✅ Saved {len(df_page)} rows.")
+                    print(f"Saved {len(df_page)} rows.")
                 else:
-                    print(f"    ⚠️ No data found on page {page}.")
+                    print(f"No data found on page {page}.")
                 
                 break 
 
@@ -160,7 +160,8 @@ def scrape_pages_robust(start_page=1, end_page=200):
                     time.sleep(5)
 
     driver.quit()
-    print("\n✅ Scraping Completed.")
+    print("\n Scraping Completed.")
 
 if __name__ == "__main__":
     scrape_pages_robust(start_page=405, end_page=505)
+
