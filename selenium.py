@@ -9,11 +9,8 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
-from selenium.common.exceptions import WebDriverException # เพิ่มตัวดัก Error ของ Selenium
+from selenium.common.exceptions import WebDriverException 
 
-# ==========================================
-# ส่วนที่ 1: Helper Functions (คงเดิม)
-# ==========================================
 def clean_price(text):
     if not text: return None
     clean = re.sub(r'[^\d]', '', text)
@@ -40,31 +37,23 @@ def extract_keywords(title_text):
         'near_bts': 1 if 'bts' in text or 'mrt' in text or 'ใกล้รถไฟฟ้า' in text else 0
     }
 
-# ฟังก์ชันเปิด Browser ใหม่ (แยกออกมาเพื่อให้เรียกใช้ซ้ำได้)
 def init_driver():
     chrome_options = Options()
-    # chrome_options.add_argument("--headless") 
     chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
-    # เพิ่ม option ลดการกินแรม
     chrome_options.add_argument("--disable-dev-shm-usage") 
     chrome_options.add_argument("--no-sandbox")
     return webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
 
-# ==========================================
-# ส่วนที่ 2: Main Scraping Loop (แก้บั๊กเรียงคอลัมน์)
-# ==========================================
 
 def scrape_pages_robust(start_page=1, end_page=200):
     
     filename = "livinginsider_big_data5.csv"
     
-    # กำหนดลำดับคอลัมน์ให้ชัดเจน (Standard Column Order)
     cols_order = [
         'price', 'project_name', 'size_sqm', 'floor_range', 'floor_num', 
         'bedroom', 'bathroom', 'title_text', 'is_corner', 'is_river_view', 'near_bts'
     ]
     
-    # สร้าง Header ถ้ายังไม่มีไฟล์
     if not os.path.exists(filename):
         pd.DataFrame(columns=cols_order).to_csv(filename, index=False, encoding="utf-8-sig")
 
@@ -101,7 +90,6 @@ def scrape_pages_robust(start_page=1, end_page=200):
                     try:
                         item = {}
                         
-                        # --- ดึงข้อมูล ---
                         try: item['price'] = clean_price(card.find_element(By.CLASS_NAME, "text_price").text)
                         except: item['price'] = None
                         
@@ -110,7 +98,6 @@ def scrape_pages_robust(start_page=1, end_page=200):
 
                         details = card.find_elements(By.CLASS_NAME, "ic-detail")
                         
-                        # Set default values
                         item['size_sqm'] = np.nan
                         item['floor_range'] = None
                         item['floor_num'] = np.nan
@@ -118,20 +105,16 @@ def scrape_pages_robust(start_page=1, end_page=200):
                         item['bathroom'] = 0
 
                         if len(details) >= 4:
-                            # 1. Size
                             size_match = re.search(r"(\d+(\.\d+)?)", details[0].text)
                             if size_match: item['size_sqm'] = float(size_match.group(1))
                             
-                            # 2. Floor (Range & Num)
                             raw_floor = details[1].text.replace('\n', ' ').strip()
                             item['floor_range'] = raw_floor
                             item['floor_num'] = convert_floor_to_number(raw_floor)
                             
-                            # 3. Bedroom
                             bed_match = re.search(r'(\d+)', details[2].text)
                             item['bedroom'] = int(bed_match.group(1)) if bed_match else 0
                             
-                            # 4. Bathroom
                             bath_match = re.search(r'(\d+)', details[3].text)
                             item['bathroom'] = int(bath_match.group(1)) if bath_match else 0
 
@@ -144,22 +127,18 @@ def scrape_pages_robust(start_page=1, end_page=200):
                             item['title_text'] = ""
                             item.update(extract_keywords(""))
 
-                        # Data Cleaning (Basic Check)
                         if item['price'] and item['price'] > 500000 and item['size_sqm'] and item['size_sqm'] > 10:
                             page_data.append(item)
                     except: continue
                 
-                # --- Save Data (แก้ไขบั๊กตรงนี้) ---
                 if page_data:
                     df_page = pd.DataFrame(page_data)
                     
-                    # ⭐ บังคับเรียงคอลัมน์ให้ตรงกับ Header CSV เป๊ะๆ
-                    # ถ้าไม่มีคอลัมน์ไหน ให้เติม NaN ป้องกัน Error
                     for col in cols_order:
                         if col not in df_page.columns:
                             df_page[col] = np.nan
                             
-                    df_page = df_page[cols_order] # Reorder columns
+                    df_page = df_page[cols_order] 
                     
                     df_page.to_csv(filename, mode='a', header=False, index=False, encoding="utf-8-sig")
                     print(f"    ✅ Saved {len(df_page)} rows.")
@@ -169,22 +148,19 @@ def scrape_pages_robust(start_page=1, end_page=200):
                 break 
 
             except (WebDriverException, Exception) as e:
-                print(f"    ❌ Error on page {page}: {e}")
+                print(f"Error on page {page}: {e}")
                 if "no such window" in str(e) or "target window already closed" in str(e) or "refused" in str(e):
                     try: driver.quit()
                     except: pass
                     time.sleep(3)
                     driver = init_driver()
                 if attempt == max_retries - 1:
-                    print(f"    💀 Skipping page {page}.")
+                    print(f"Skipping page {page}.")
                 else:
                     time.sleep(5)
 
     driver.quit()
     print("\n✅ Scraping Completed.")
 
-# ==========================================
-# สั่งรันต่อจากหน้าที่พัง
-# ==========================================
 if __name__ == "__main__":
     scrape_pages_robust(start_page=405, end_page=505)
